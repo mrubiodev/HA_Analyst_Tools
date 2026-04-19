@@ -1,20 +1,15 @@
-# ── Stage 1: build ───────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
-
+# ── Stage 1: Build ──────────────────────────────────────────
+# node:22-bookworm: glibc + prebuilts de canvas disponibles
+FROM node:22-bookworm AS build
 WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci --ignore-scripts
-
-COPY . .
+COPY app/package.json app/package-lock.json* ./
+RUN npm ci
+COPY app/ ./
 RUN npm run build
 
-# ── Stage 2: serve ────────────────────────────────────────────────────────────
-FROM nginx:1.27-alpine AS runtime
-
-COPY --from=builder /app/dist /usr/share/nginx/html
+# ── Stage 2: Serve ──────────────────────────────────────────
+FROM nginx:stable-alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-EXPOSE 80
-
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]
