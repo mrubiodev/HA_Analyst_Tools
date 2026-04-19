@@ -1,10 +1,13 @@
 # ── Stage 1: Build ──────────────────────────────────────────
-# node:22-bookworm: glibc + prebuilts de canvas disponibles
 FROM node:22-bookworm AS build
 WORKDIR /app
+
+# Instalar dependencias primero (capa cacheada)
 COPY package.json package-lock.json* ./
 RUN npm ci
-COPY . ./
+
+# Copiar el resto del código y construir
+COPY . .
 RUN npm run build
 
 # ── Stage 2: Serve ──────────────────────────────────────────
