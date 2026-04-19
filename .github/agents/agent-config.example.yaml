@@ -1,0 +1,38 @@
+# Example agent config - edit and copy to .github/agents/agent-config.yaml
+# Use environment variables in CI for secrets; do NOT commit real secrets.
+
+# Paths and SKILLs
+skills_dir: ".github/skills"
+skills:
+  - ha-secret-scan: "ha-secret-scan/SKILL.md"
+
+# Agent defaults
+default_applyTo:
+  - "src/**"
+  - ".github/**"
+  - "package.json"
+entrypoint_template: |
+  Ejecuta tareas siguiendo confirmación del usuario. Siempre pedir permiso antes de cambios destructivos o lectura del historial Git.
+
+# Storage and runtime keys
+token_storage_key: "ha-token"        # key used in sessionStorage/localStorage
+session_storage: true                 # prefer sessionStorage over localStorage
+
+# Scanning options
+scan:
+  include_ignored: true               # include files ignored by .gitignore
+  include_node_modules: false
+  include_dist: false
+  include_git_history: false          # set true to enable git-history scan (requires permission)
+  mask_show_first: 4                   # characters to show when masking secrets
+
+# Hooks and recommendations
+precommit_hook: "detect-secrets --baseline .secrets.baseline"
+ci_scan_command: "gitleaks detect --source . --report-format=json --report-path=reports/gitleaks.json"
+
+# Outputs
+report_path: "reports/secret-scan-report.md"
+
+# Notes:
+# - For production, use CI environment variables for keys (e.g., ANTHROPIC_API_KEY).
+# - Copy this file to .github/agents/agent-config.yaml and customize as needed.

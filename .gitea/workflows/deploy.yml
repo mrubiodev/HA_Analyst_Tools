@@ -1,0 +1,54 @@
+name: Deploy from Mirror
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: [vm, docker, linux, amd64]
+    container:
+      image: node:22-bookworm
+
+    steps:
+      - name: Install Docker CLI
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq docker.io
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set deploy vars
+        run: |
+          APP_NAME=$(echo "${GITHUB_REPOSITORY##*/}" | tr '[:upper:]' '[:lower:]')
+          COMMIT=$(git rev-parse --short HEAD)
+          echo "APP_NAME=${APP_NAME}" >> $GITHUB_ENV
+          echo "COMMIT=${COMMIT}"     >> $GITHUB_ENV
+          # Puerto definido como variable de repositorio en Forgejo (Settings → Actions → Variables)
+          echo "DEPLOY_PORT=${{ vars.DEPLOY_PORT }}" >> $GITHUB_ENV
+
+      - name: Skip if already deployed
+        run: |
+          RUNNING=$(docker ps --filter "name=^${APP_NAME}$" --format "{{.Image}}" 2>/dev/null || true)
+          if [ "$RUNNING" = "${APP_NAME}:${COMMIT}" ]; then
+            echo "Ya en producción: ${APP_NAME}:${COMMIT}, saltando deploy."
+            exit 0
+          fi
+
+      - name: Build image
+        run: |
+          docker build -t ${APP_NAME}:${COMMIT} .
+
+      - name: Deploy
+        run: |
+          docker rm -f ${APP_NAME} 2>/dev/null || true
+          docker run -d --restart unless-stopped \
+            --name ${APP_NAME} \
+            -p ${DEPLOY_PORT}:8080 \
+            ${APP_NAME}:${COMMIT}
+
+      - name: Cleanup
+        run: |
+          docker image prune -af --filter "until=24h"
