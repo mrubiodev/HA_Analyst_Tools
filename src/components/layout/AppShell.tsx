@@ -1,5 +1,5 @@
 
-import { Shield, Wifi, WifiOff, Download, Home } from 'lucide-react'
+import { Shield, Wifi, WifiOff, Download, Home, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useVaultStore } from '@/store/vaultStore'
 import { useInventoryStore } from '@/store/inventoryStore'
@@ -99,6 +99,18 @@ export function AppShell({ activeTab, setActiveTab, children }: AppShellProps) {
           ))}
         </div>
       </nav>
+
+      {/* ── Privacy disclaimer ─────────────────────────────────────────── */}
+      <aside className="border-b border-yellow-500/30 bg-yellow-500/10 text-yellow-100">
+        <div className="mx-auto max-w-screen-xl px-4 py-2.5 flex items-start gap-2 text-xs leading-relaxed">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-yellow-400" />
+          <p>
+            <strong>Privacidad:</strong> no introduzcas tokens de Home Assistant ni API keys en ordenadores compartidos.
+            Usa credenciales temporales y de mínimo privilegio, no compartas capturas, exportaciones ni archivos JSON con datos reales,
+            y limpia el almacenamiento del navegador al terminar.
+          </p>
+        </div>
+      </aside>
 
       {/* ── Content ─────────────────────────────────────────────────────── */}
       <main className="flex-1 mx-auto w-full max-w-screen-xl px-4 py-6">

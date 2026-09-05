@@ -1,0 +1,19 @@
+# wrangler.toml
+#
+# El sitio es 100% estático (Astro sin adapter, "output: static" — lo
+# confirma el primer build del log, que generó las 15 páginas sin problema).
+# Sin este fichero, `wrangler deploy` no sabe que solo hay que servir
+# ficheros de dist/: intenta reconvertir el proyecto en un Worker con SSR
+# ejecutando "astro add cloudflare" por su cuenta, instala el paquete
+# @astrojs/cloudflare, y esa versión no es compatible con Astro 7.2.10
+# (de ahí el error MISSING_EXPORT "renderForPrerender").
+#
+# Con [assets] declarado explícitamente, no hace falta ningún adaptador de
+# Astro ni script de Worker: Cloudflare sirve los ficheros de dist/
+# directamente como Worker de solo-assets.
+
+name = "ha-analyst-tools"
+compatibility_date = "2026-09-04"
+
+[assets]
+directory = "./dist"
