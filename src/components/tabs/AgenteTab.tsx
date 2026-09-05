@@ -1,7 +1,7 @@
 ﻿import { useState, useRef, useEffect, useMemo } from 'react'
 import {
   Send, Bot, User, AlertCircle, Settings, Loader2,
-  Wrench, ChevronDown, ChevronRight, Zap, SlidersHorizontal, Eye, Gauge, Copy, Check, RotateCcw,
+  Wrench, ChevronDown, ChevronRight, Zap, SlidersHorizontal, Eye, Gauge, Copy, Check, RotateCcw, CheckCircle2, Wifi,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -441,6 +441,7 @@ function ModalDialog({
               </button>
             </Dialog.Close>
           </div>
+          <Dialog.Description className="sr-only">Panel de configuración de {title.toLowerCase()}</Dialog.Description>
           {children}
         </Dialog.Content>
       </Dialog.Portal>
@@ -495,6 +496,8 @@ export function AgenteTab() {
   const [lastPrompt, setLastPrompt] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [providerStatus, setProviderStatus] = useState<'idle' | 'testing' | 'connected' | 'error'>('idle')
+  const [providerStatusMessage, setProviderStatusMessage] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
 
   // Context config
@@ -524,6 +527,8 @@ export function AgenteTab() {
     const next = { ...config, ...patch }
     setConfig(next)
     saveLlmConfig(next)
+    setProviderStatus('idle')
+    setProviderStatusMessage('')
   }
 
   const compatibleModelsUrl = OPENAI_COMPATIBLE_MODEL_ENDPOINTS[config.provider]?.(config)
@@ -563,6 +568,11 @@ export function AgenteTab() {
         } else {
           const canDiscoverModels = compatibleModelsUrl && (config.provider === 'omniroute' || Boolean(config.apiKey))
           if (!canDiscoverModels) return
+          if (!import.meta.env.DEV && compatibleModelsUrl.startsWith('http://')) {
+            setProviderStatus('error')
+            setProviderStatusMessage('La URL del provider debe usar HTTPS en producción')
+            return
+          }
           const r = await fetch(compatibleModelsUrl, { headers: config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {} })
           if (r.ok) {
             const d = await r.json()
@@ -575,7 +585,11 @@ export function AgenteTab() {
             }
           }
         }
-      } catch (e) { console.debug('fetchModels error', e) }
+      } catch (e) {
+        console.debug('fetchModels error', e)
+        setProviderStatus('error')
+        setProviderStatusMessage('No se pudo verificar el endpoint del provider. Revisa HTTPS, certificado y CORS.')
+      }
     }
     fetchModels()
   }, [config.provider, config.ollamaUrl, config.llmstudioUrl, config.omnirouteUrl, config.apiKey, compatibleModelsUrl])
@@ -678,6 +692,8 @@ export function AgenteTab() {
     setLastPrompt(trimmed)
     if (!config.apiKey && config.provider !== 'ollama' && config.provider !== 'llmstudio' && config.provider !== 'omniroute') {
       setError('Introduce tu API key en la configuración')
+      setProviderStatus('error')
+      setProviderStatusMessage('Falta la API key')
       return
     }
     setInput('')
@@ -730,7 +746,11 @@ export function AgenteTab() {
       setLoading(false)
       if (result.error) {
         setError(result.error)
+        setProviderStatus('error')
+        setProviderStatusMessage(result.error)
       } else {
+        setProviderStatus('connected')
+        setProviderStatusMessage('Conexión verificada')
         const assistantMsg: LlmMessage = { role: 'assistant', content: result.finalContent }
         const finishedAt = new Date().toISOString()
         const responseMs = performance.now() - startedAt
@@ -749,7 +769,11 @@ export function AgenteTab() {
       setLoading(false)
       if (result.error) {
         setError(result.error)
+        setProviderStatus('error')
+        setProviderStatusMessage(result.error)
       } else {
+        setProviderStatus('connected')
+        setProviderStatusMessage('Conexión verificada')
         const assistantMsg: LlmMessage = { role: 'assistant', content: result.content }
         const finishedAt = new Date().toISOString()
         const responseMs = performance.now() - startedAt
@@ -766,6 +790,30 @@ export function AgenteTab() {
         setChatLog((prev) => [...prev, { kind: 'chat', msg: assistantMsg, meta: assistantMeta }])
       }
     }
+  }
+
+  async function testProviderConnection() {
+    if (loading) return
+    if (!config.apiKey && config.provider !== 'ollama' && config.provider !== 'llmstudio' && config.provider !== 'omniroute') {
+      setProviderStatus('error')
+      setProviderStatusMessage('Introduce la API key antes de probar la conexión')
+      return
+    }
+
+    setProviderStatus('testing')
+    setProviderStatusMessage('Comprobando conexión...')
+    const result = await sendLlmMessage(
+      [{ role: 'user', content: 'Responde únicamente: OK' }],
+      'Responde únicamente: OK',
+      effectiveLlmConfig,
+    )
+    if (result.error) {
+      setProviderStatus('error')
+      setProviderStatusMessage(result.error)
+      return
+    }
+    setProviderStatus('connected')
+    setProviderStatusMessage('Conectado correctamente')
   }
 
   // Derived summary for sidebar badge
@@ -1019,6 +1067,23 @@ export function AgenteTab() {
               <p className="text-xs text-muted-foreground">Guardado en sessionStorage</p>
             </div>
           )}
+
+          <div className={cn(
+            'flex items-center gap-1.5 rounded-md border px-2 py-1.5 text-[11px]',
+            providerStatus === 'connected' && 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
+            providerStatus === 'testing' && 'border-blue-500/30 bg-blue-500/10 text-blue-400',
+            providerStatus === 'error' && 'border-destructive/30 bg-destructive/10 text-destructive',
+            providerStatus === 'idle' && 'border-border text-muted-foreground',
+          )}>
+            {providerStatus === 'testing' ? <Loader2 className="w-3 h-3 animate-spin" /> : providerStatus === 'connected' ? <CheckCircle2 className="w-3 h-3" /> : null}
+            <span>{providerStatus === 'connected' ? 'Provider conectado' : providerStatus === 'testing' ? 'Probando provider...' : providerStatus === 'error' ? 'Provider no conectado' : 'Provider sin verificar'}</span>
+            {providerStatusMessage && <span className="ml-auto max-w-[65%] truncate opacity-80" title={providerStatusMessage}>{providerStatusMessage}</span>}
+          </div>
+
+          <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={() => void testProviderConnection()} disabled={loading || providerStatus === 'testing'}>
+            {providerStatus === 'testing' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wifi className="w-3.5 h-3.5" />}
+            Probar conexión
+          </Button>
 
           {config.provider === 'omniroute' && (
             <>

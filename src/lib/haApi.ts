@@ -30,6 +30,7 @@ export function classifyDomain(domain: string): EntityKind {
 export class HAClient {
   private baseUrl: string
   private headers: Record<string, string>
+  private lastPingError: string | null = null
 
   constructor(url: string, token: string) {
     // Normalize: strip trailing slash
@@ -77,10 +78,16 @@ export class HAClient {
   async ping(): Promise<boolean> {
     try {
       await this.get<{ message: string }>('')
+      this.lastPingError = null
       return true
-    } catch {
+    } catch (error: unknown) {
+      this.lastPingError = error instanceof Error ? error.message : String(error)
       return false
     }
+  }
+
+  getPingError(): string | null {
+    return this.lastPingError
   }
 
   async getStates(): Promise<HaStateRaw[]> {

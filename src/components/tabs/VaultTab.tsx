@@ -48,7 +48,13 @@ export function VaultTab() {
       const client = new HAClient(url, localToken)
       const ok = await client.ping()
       if (!ok) {
-        setError('No se pudo conectar. Verifica la URL y el token.')
+        const pingError = client.getPingError()?.toLowerCase() ?? ''
+        if (pingError.includes('failed to fetch') || pingError.includes('cors') || pingError.includes('networkerror')) {
+          setCorsError(true)
+          setError('Home Assistant no permite el origen de esta aplicación. Añade esto a configuration.yaml y reinicia Home Assistant:\n\nhttp:\n  cors_allowed_origins:\n    - "https://hasstools.mrubiodev.com"')
+        } else {
+          setError('No se pudo conectar. Verifica la URL y el token.')
+        }
         setConnected(false)
         setConnecting(false)
         return
