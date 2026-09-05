@@ -121,14 +121,16 @@ Esta app se diseñó con una mentalidad de mínima exposición:
 - los datos sensibles no deben compartirse en capturas ni exportaciones públicas;
 - se recomienda cerrar o limpiar la sesión al terminar cada trabajo.
 
-## Configuración de CORS (opcional)
+## Configuración de CORS
 
-En modo desarrollo el proxy de Vite evita los errores de CORS automáticamente. En producción (Docker), el contenedor nginx actúa como proxy. Si accedes directamente desde otro origen, añade a `configuration.yaml` de HA:
+En modo desarrollo el proxy de Vite evita los errores de CORS automáticamente. En producción, la aplicación estática contacta directamente con Home Assistant, por lo que HA debe permitir el origen desde el que se abre la aplicación:
 
 ```yaml
 http:
   cors_allowed_origins:
     - "http://localhost:5173"
-    - "http://<IP_DE_TU_APP>"
+    - "https://hasstools.mrubiodev.com"
 ```
+
+Reinicia Home Assistant después de cambiar `configuration.yaml`. La URL configurada en Vault también debe usar `https://`, por ejemplo `https://hass.local`; una aplicación publicada con HTTPS no puede acceder directamente a una URL HTTP.
 

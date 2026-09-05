@@ -26,8 +26,17 @@ export function VaultTab() {
       setError('Introduce la URL y el token de HA')
       return
     }
-    if (window.location.protocol === 'https:' && url.trim().toLowerCase().startsWith('http://')) {
-      setError('Esta aplicación usa HTTPS. Home Assistant debe estar publicado con HTTPS para evitar contenido mixto y permitir la conexión.')
+    let haOrigin: URL
+    try {
+      haOrigin = new URL(url.trim())
+    } catch {
+      setError('La URL de Home Assistant no es válida. Usa una dirección completa, por ejemplo https://ha.example.com')
+      setConnected(false)
+      return
+    }
+    if (window.location.protocol === 'https:' && haOrigin.protocol !== 'https:') {
+      setCorsError(true)
+      setError('No se puede conectar: esta aplicación usa HTTPS y Home Assistant está configurado con HTTP. Publica Home Assistant mediante HTTPS y añade el origen permitido en configuration.yaml:\n\nhttp:\n  cors_allowed_origins:\n    - "https://hasstools.mrubiodev.com"')
       setConnected(false)
       return
     }
