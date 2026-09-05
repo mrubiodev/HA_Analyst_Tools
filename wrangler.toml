@@ -15,5 +15,8 @@
 name = "ha-analyst-tools"
 compatibility_date = "2026-09-04"
 
+[build]
+command = "npm run build"
+
 [assets]
 directory = "./dist"
