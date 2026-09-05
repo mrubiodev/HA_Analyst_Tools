@@ -116,7 +116,7 @@ function StatesSection({ client }: { client: HAClient }) {
       // Refresh list of states to reflect the change (some integrations may override)
       try { await load() } catch { /* ignore */ }
       // If we have the states loaded, update the selected entity details
-      setSelected((prev) => (prev && prev['entity_id'] === updateEntityId ? { ...(prev as any), state: updateState } : prev))
+      setSelected((prev) => (prev && prev['entity_id'] === updateEntityId ? { ...prev, state: updateState } as Record<string, unknown> : prev))
     } catch (e) { setUpdateError(String(e)) }
     setUpdateLoading(false)
   }
@@ -496,8 +496,9 @@ function EventsSection({ client }: { client: HAClient }) {
                         // Some HA proxies or middleware may return slightly different shapes
                         // (e.g. `event_type` vs `eventType` or `type`). Be defensive and
                         // display any available field.
-                        const et = String((ev as any)['event_type'] ?? (ev as any)['eventType'] ?? (ev as any)['type'] ?? '')
-                        const lc = (ev as any)['listener_count'] ?? (ev as any)['listeners'] ?? ''
+                        const eventRecord = ev as Record<string, unknown>
+                        const et = String(eventRecord.event_type ?? eventRecord.eventType ?? eventRecord.type ?? '')
+                        const lc = eventRecord.listener_count ?? eventRecord.listeners ?? ''
                         return (
                           <tr key={et || i} className="border-t border-border hover:bg-accent/20 cursor-pointer transition-colors" onClick={() => setFireType(et)}>
                             <td className="px-3 py-1.5 font-mono text-primary text-[11px]">{et}</td>

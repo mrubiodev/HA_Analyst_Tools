@@ -87,6 +87,12 @@ export function VaultTab() {
     e.target.value = ''
   }
 
+  function handleClearToken() {
+    setLocalToken('')
+    vaultToken.clear()
+    setError(null)
+  }
+
   return (
     <div className="grid gap-6 max-w-2xl mx-auto">
       {/* Connection card */}
@@ -125,18 +131,34 @@ export function VaultTab() {
                 value={localToken}
                 onChange={(e) => setLocalToken(e.target.value)}
                 disabled={connecting || loading}
-                className="pr-10"
+                className="pr-20"
               />
-              <button
-                type="button"
-                onClick={() => setShowToken(!showToken)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setShowToken(!showToken)}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label={showToken ? 'Ocultar token' : 'Mostrar token'}
+                >
+                  {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+                {localToken && (
+                  <button
+                    type="button"
+                    onClick={handleClearToken}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </div>
             </div>
             <p className="text-xs text-muted-foreground">
               HA → Perfil → Seguridad → Tokens de acceso de larga duración
+            </p>
+            <p className="text-[11px] text-muted-foreground/90">
+              El token se guarda solo en <strong>sessionStorage</strong> y se borra al cerrar la pestaña o al pulsar “Limpiar”.
+              No se persiste en <strong>localStorage</strong>.
             </p>
           </div>
 

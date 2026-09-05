@@ -41,6 +41,12 @@ export const useVaultStore = create<VaultState>()(
 // Token is kept in sessionStorage separately (more secure — cleared on tab close)
 export const vaultToken = {
   get: () => sessionStorage.getItem('ha-token') ?? '',
-  set: (t: string) => sessionStorage.setItem('ha-token', t),
+  set: (t: string) => {
+    if (!t.trim()) {
+      sessionStorage.removeItem('ha-token')
+      return
+    }
+    sessionStorage.setItem('ha-token', t)
+  },
   clear: () => sessionStorage.removeItem('ha-token'),
 }

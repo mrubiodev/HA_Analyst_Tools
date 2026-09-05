@@ -381,9 +381,20 @@ export function ResumenTab() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold">Resumen del inventario</h2>
-        <p className="text-sm text-muted-foreground">Generado: {new Date(inventory.generated_at).toLocaleString('es-ES')}</p>
+      <div className="rounded-2xl border border-border bg-card/60 p-4 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">Resumen</p>
+            <h2 className="text-lg font-semibold">Inventario de Home Assistant</h2>
+            <p className="text-sm text-muted-foreground">Generado: {new Date(inventory.generated_at).toLocaleString('es-ES')}</p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="secondary" className="px-2.5 py-1">{allEntities.length} entidades</Badge>
+            <Badge variant="outline" className="px-2.5 py-1">{inventory.areas.length} áreas</Badge>
+            <Badge variant="outline" className="px-2.5 py-1">{inventory.automations.length} automatizaciones</Badge>
+          </div>
+        </div>
       </div>
 
       {/* KPIs */}
@@ -420,7 +431,7 @@ export function ResumenTab() {
               </button>
             )}
           </CardTitle>
-          <div className="flex gap-2 mt-2">
+          <div className="mt-2 flex flex-col gap-2 xl:flex-row xl:items-center">
             <Input
               placeholder="Buscar entity_id o nombre..."
               value={search}
@@ -442,7 +453,7 @@ export function ResumenTab() {
               {filtersOpen ? 'Ocultar filtros avanzados' : 'Filtros avanzados'}
               {filterRules.length > 0 && <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-[10px]">{filterRules.length}</Badge>}
             </Button>
-            <Button variant="outline" size="sm" className="gap-1.5 ml-auto" onClick={exportCurrentViewToMarkdown}>
+            <Button variant="outline" size="sm" className="gap-1.5 xl:ml-auto" onClick={exportCurrentViewToMarkdown}>
               <FileText className="w-3.5 h-3.5" /> Exportar MD
             </Button>
           </div>

@@ -30,6 +30,8 @@ export function AppShell({ activeTab, setActiveTab, children }: AppShellProps) {
   const inventory = useInventoryStore((s) => s.inventory)
   const zones = useZonesStore((s) => s.zones)
 
+  const inventoryStatus = inventory ? 'Inventario cargado' : 'Sin inventario'
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* ── Header ──────────────────────────────────────────────────────── */}
@@ -99,6 +101,35 @@ export function AppShell({ activeTab, setActiveTab, children }: AppShellProps) {
           ))}
         </div>
       </nav>
+
+      <aside className="border-b border-border bg-gradient-to-r from-primary/5 via-transparent to-emerald-500/5">
+        <div className="mx-auto max-w-screen-xl px-4 py-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
+                HA Analyst
+              </span>
+              <span className="text-muted-foreground">Panel de control</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className={cn(
+                'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1',
+                connected ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300' : 'border-border bg-background text-muted-foreground',
+              )}>
+                <span className={cn('h-1.5 w-1.5 rounded-full', connected ? 'bg-emerald-400' : 'bg-muted-foreground')} />
+                {connected ? 'Conexión activa' : 'Sin conexión'}
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-1 text-muted-foreground">
+                {inventoryStatus}
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-1 text-muted-foreground">
+                Privacidad reforzada
+              </span>
+            </div>
+          </div>
+        </div>
+      </aside>
 
       {/* ── Privacy disclaimer ─────────────────────────────────────────── */}
       <aside className="border-b border-yellow-500/30 bg-yellow-500/10 text-yellow-100">

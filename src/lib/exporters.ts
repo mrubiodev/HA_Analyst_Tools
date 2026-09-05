@@ -44,9 +44,8 @@ function safeStr(v: unknown): string {
 }
 
 function slimEntity<T extends HaEntity>(e: T): Omit<T, 'attributes' | 'last_changed' | 'last_updated'> {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { attributes, last_changed, last_updated, ...rest } = e
-  return rest
+  const filteredEntries = Object.entries(e).filter(([key]) => !['attributes', 'last_changed', 'last_updated'].includes(key))
+  return Object.fromEntries(filteredEntries) as Omit<T, 'attributes' | 'last_changed' | 'last_updated'>
 }
 
 export function exportToExcel(inventory: Inventory, zones: Zone[], opts: ExportOptions = DEFAULT_EXPORT_OPTIONS): void {
@@ -179,18 +178,10 @@ export function exportToJson(inventory: Inventory, zones: Zone[], opts: ExportOp
   }
 
   if (sections.areas) data.areas = inventory.areas
-  if (sections.automations) data.automations = slim
-    ? inventory.automations.map(({ attributes, last_changed, last_updated, ...r }) => r)
-    : inventory.automations
-  if (sections.scenes) data.scenes = slim
-    ? inventory.scenes.map(({ attributes, last_changed, last_updated, ...r }) => r)
-    : inventory.scenes
-  if (sections.groups) data.groups = slim
-    ? inventory.groups.map(({ attributes, last_changed, last_updated, ...r }) => r)
-    : inventory.groups
-  if (sections.scripts) data.scripts = slim
-    ? inventory.scripts.map(({ attributes, last_changed, last_updated, ...r }) => r)
-    : inventory.scripts
+  if (sections.automations) data.automations = slim ? inventory.automations.map((item) => slimEntity(item)) : inventory.automations
+  if (sections.scenes) data.scenes = slim ? inventory.scenes.map((item) => slimEntity(item)) : inventory.scenes
+  if (sections.groups) data.groups = slim ? inventory.groups.map((item) => slimEntity(item)) : inventory.groups
+  if (sections.scripts) data.scripts = slim ? inventory.scripts.map((item) => slimEntity(item)) : inventory.scripts
   if (sections.sensors) data.sensors = pick(inventory.sensors)
   if (sections.actuators) data.actuators = pick(inventory.actuators)
   if (sections.others) data.others = pick(inventory.others)

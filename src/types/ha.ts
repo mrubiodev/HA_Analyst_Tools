@@ -98,7 +98,7 @@ export interface Zone {
 
 // ─── LLM ─────────────────────────────────────────────────────────────────────
 
-export type LlmProvider = 'claude' | 'openai' | 'openrouter' | 'ollama' | 'llmstudio'
+export type LlmProvider = 'claude' | 'openai' | 'openrouter' | 'omniroute' | 'ollama' | 'llmstudio'
 
 export interface ToolCallDef {
   id: string
@@ -124,6 +124,8 @@ export interface LlmConfig {
   ollamaModel: string   // default llama3
   openaiModel: string   // default gpt-4o
   openrouterModel?: string
+  omnirouteUrl?: string // default http://localhost:20128/v1
+  omnirouteModel?: string // default auto
   claudeModel: string   // default claude-3-5-sonnet-20241022
   llmstudioUrl?: string // default http://localhost:1234
   llmstudioModel?: string

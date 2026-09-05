@@ -1,7 +1,7 @@
 ﻿import { useState, useRef, useEffect, useMemo } from 'react'
 import {
   Send, Bot, User, AlertCircle, Settings, Loader2,
-  Wrench, ChevronDown, ChevronRight, Zap, SlidersHorizontal, Eye, Gauge,
+  Wrench, ChevronDown, ChevronRight, Zap, SlidersHorizontal, Eye, Gauge, Copy, Check, RotateCcw,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -40,10 +40,18 @@ const QUICK_QUESTIONS = [
   '¿Cómo podría optimizar mis automatizaciones de iluminación?',
 ]
 
+const CONTEXT_PRESETS = [
+  { id: 'none', label: 'Vacío' },
+  { id: 'autos', label: 'Autos' },
+  { id: 'entities', label: 'Entidades' },
+  { id: 'full', label: 'Completo' },
+] as const
+
 const PROVIDER_LABELS: Record<LlmProvider, string> = {
   claude: '🟣 Claude (Anthropic)',
   openai: '🟢 OpenAI (GPT-4o)',
   openrouter: '🔵 OpenRouter',
+  omniroute: '⚪ OmniRoute (gateway local)',
   ollama: '⚫ Ollama (local)',
   llmstudio: '🟠 LLMStudio (local)',
 }
@@ -262,6 +270,7 @@ function compactConversationToBudget(
 
 function ChatMessage({ msg, meta }: { msg: LlmMessage; meta?: MsgMeta }) {
   const isUser = msg.role === 'user'
+  const [copied, setCopied] = useState(false)
   const stats = meta?.stats as Record<string, unknown> | undefined
   const inputTokens = statNumber(stats, 'input_tokens') ?? statNumber(stats, 'prompt_tokens')
   const outputTokens = statNumber(stats, 'output_tokens') ?? statNumber(stats, 'completion_tokens')
@@ -282,7 +291,25 @@ function ChatMessage({ msg, meta }: { msg: LlmMessage; meta?: MsgMeta }) {
         {isUser ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5 text-primary" />}
       </div>
       <div className={cn('rounded-2xl px-4 py-3 text-sm max-w-[85%] whitespace-pre-wrap border', isUser ? 'bg-primary/15 text-foreground border-primary/20' : 'bg-secondary text-foreground border-border/60')}>
-        {msg.content}
+        <div className="mb-1.5 flex items-center gap-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          <span>{isUser ? 'Tú' : 'Asistente'}</span>
+          {!isUser && (
+            <button
+              type="button"
+              className="ml-auto inline-flex items-center gap-1 rounded px-1.5 py-0.5 normal-case tracking-normal hover:bg-background/60 hover:text-foreground transition-colors"
+              onClick={() => {
+                void navigator.clipboard?.writeText(msg.content)
+                setCopied(true)
+                window.setTimeout(() => setCopied(false), 1500)
+              }}
+              title="Copiar respuesta"
+            >
+              {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+              {copied ? 'Copiado' : 'Copiar'}
+            </button>
+          )}
+        </div>
+        <div>{msg.content}</div>
         {meta?.reasoning && (
           <div className="mt-2 rounded-xl border border-border/60 bg-background/40 px-3 py-2 text-xs text-muted-foreground">
             {meta.reasoning && <div className="italic mb-1">Reasoning: {String(meta.reasoning)}</div>}
@@ -429,6 +456,8 @@ function loadLlmConfig(): LlmConfig {
     ollamaModel: 'llama3',
     openaiModel: 'gpt-4o',
     openrouterModel: 'openai/gpt-4o-mini',
+    omnirouteUrl: 'http://localhost:20128/v1',
+    omnirouteModel: 'auto',
     claudeModel: 'claude-3-5-sonnet-20241022',
     temperature: 0.0,
     maxTokens: 1024,
@@ -457,6 +486,7 @@ export function AgenteTab() {
   const [conversationSummary, setConversationSummary] = useState('')
   const [compressionCount, setCompressionCount] = useState(0)
   const [input, setInput] = useState('')
+  const [lastPrompt, setLastPrompt] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -522,11 +552,13 @@ export function AgenteTab() {
               }
             } catch (err) { console.debug('llmstudio model fetch', err) }
           }
-        } else if ((config.provider === 'openai' || config.provider === 'openrouter') && config.apiKey) {
+        } else if (config.provider === 'omniroute' || ((config.provider === 'openai' || config.provider === 'openrouter') && config.apiKey)) {
           const modelsUrl = config.provider === 'openrouter'
             ? 'https://openrouter.ai/api/v1/models'
-            : 'https://api.openai.com/v1/models'
-          const r = await fetch(modelsUrl, { headers: { Authorization: `Bearer ${config.apiKey}` } })
+            : config.provider === 'omniroute'
+              ? `${(config.omnirouteUrl || 'http://localhost:20128/v1').replace(/\/$/, '')}/models`
+              : 'https://api.openai.com/v1/models'
+          const r = await fetch(modelsUrl, { headers: config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {} })
           if (r.ok) {
             const d = await r.json()
             const maybe = (d as Record<string, unknown>)['data']
@@ -541,7 +573,7 @@ export function AgenteTab() {
       } catch (e) { console.debug('fetchModels error', e) }
     }
     fetchModels()
-  }, [config.provider, config.ollamaUrl, config.llmstudioUrl, config.apiKey])
+  }, [config.provider, config.ollamaUrl, config.llmstudioUrl, config.omnirouteUrl, config.apiKey])
 
   const selectedLlmStudioModel = config.llmstudioModel || availableModels[0] || ''
   const selectedLlmStudioInfo = selectedLlmStudioModel ? llmstudioModelInfos[selectedLlmStudioModel] : undefined
@@ -638,7 +670,8 @@ export function AgenteTab() {
   async function send(text: string) {
     const trimmed = text.trim()
     if (!trimmed || loading) return
-    if (!config.apiKey && config.provider !== 'ollama' && config.provider !== 'llmstudio') {
+    setLastPrompt(trimmed)
+    if (!config.apiKey && config.provider !== 'ollama' && config.provider !== 'llmstudio' && config.provider !== 'omniroute') {
       setError('Introduce tu API key en la configuración')
       return
     }
@@ -738,6 +771,37 @@ export function AgenteTab() {
     includeGroups && `${selectedGroupIds.length} grupos`,
   ].filter(Boolean).join(' · ')
 
+  function applyContextPreset(preset: 'none' | 'autos' | 'entities' | 'full') {
+    if (!inventory) return
+
+    if (preset === 'none') {
+      setIncludeAutomations(false)
+      setIncludeAreas(false)
+      setIncludeEntities(false)
+      setIncludeGroups(false)
+      setSelectedAutomationIds([])
+      setSelectedEntityIds([])
+      setSelectedAreaIds([])
+      setSelectedGroupIds([])
+      return
+    }
+
+    const allAutomationIds = inventory.automations.map((a) => a.entity_id)
+    const allEntityIds = [...inventory.sensors, ...inventory.actuators].map((e) => e.entity_id)
+    const allAreaIds = inventory.areas.map((a) => a.area_id)
+    const allGroupIds = inventory.groups.map((g) => g.entity_id)
+
+    setIncludeAutomations(preset === 'autos' || preset === 'full')
+    setIncludeEntities(preset === 'entities' || preset === 'full')
+    setIncludeAreas(preset === 'full')
+    setIncludeGroups(preset === 'full')
+
+    setSelectedAutomationIds(preset === 'autos' || preset === 'full' ? allAutomationIds : [])
+    setSelectedEntityIds(preset === 'entities' || preset === 'full' ? allEntityIds : [])
+    setSelectedAreaIds(preset === 'full' ? allAreaIds : [])
+    setSelectedGroupIds(preset === 'full' ? allGroupIds : [])
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-[calc(100vh-200px)] min-h-[500px]">
 
@@ -769,6 +833,25 @@ export function AgenteTab() {
               {ctxBadge && <span className="text-muted-foreground text-[10px] truncate max-w-[80px]">{ctxBadge}</span>}
             </Button>
 
+            <div className="border-t border-border pt-2 space-y-1.5">
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wide">Presets de contexto</label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {CONTEXT_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => applyContextPreset(preset.id)}
+                    className={cn(
+                      'rounded-md border px-2 py-1 text-[10px] transition-colors',
+                      preset.id === 'none' ? 'border-border text-muted-foreground hover:bg-accent/30' : 'border-primary/30 bg-primary/5 text-primary hover:bg-primary/10',
+                    )}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Tool toggles */}
             <div className="border-t border-border pt-2 space-y-1.5">
               <label className="text-[10px] text-muted-foreground uppercase tracking-wide flex items-center gap-1">
@@ -790,7 +873,7 @@ export function AgenteTab() {
               )}
               {toolsEnabled && (
                 <p className="text-[10px] text-muted-foreground pl-1">
-                  {activeTools.length} activas · {config.provider === 'claude' || config.provider === 'openai' || config.provider === 'openrouter' ? 'native' : 'JSON inject'}
+                  {activeTools.length} activas · {config.provider === 'claude' || config.provider === 'openai' || config.provider === 'openrouter' || config.provider === 'omniroute' ? 'native' : 'JSON inject'}
                 </p>
               )}
             </div>
@@ -883,9 +966,20 @@ export function AgenteTab() {
           )}
 
           {error && (
-            <div className="flex items-start gap-2 rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
+            <div className="flex items-start gap-3 rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <span>{error}</span>
+              <span className="flex-1">{error}</span>
+              {lastPrompt && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 shrink-0 gap-1 border-destructive/30 px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => void send(lastPrompt)}
+                  disabled={loading}
+                >
+                  <RotateCcw className="w-3 h-3" /> Reintentar
+                </Button>
+              )}
             </div>
           )}
 
@@ -913,12 +1007,37 @@ export function AgenteTab() {
       {/* ── Dialog: LLM config ───────────────────────────────────────────── */}
       <ModalDialog open={llmDialogOpen} onOpenChange={setLlmDialogOpen} title="Configuración del modelo LLM">
         <div className="space-y-4">
-          {config.provider !== 'ollama' && config.provider !== 'llmstudio' && (
+          {config.provider !== 'ollama' && config.provider !== 'llmstudio' && config.provider !== 'omniroute' && (
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">API Key</label>
               <Input type="password" placeholder="sk-... / sk-ant-..." value={config.apiKey} onChange={(e) => updateConfig({ apiKey: e.target.value })} />
               <p className="text-xs text-muted-foreground">Guardado en sessionStorage</p>
             </div>
+          )}
+
+          {config.provider === 'omniroute' && (
+            <>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">URL base OmniRoute</label>
+                <Input placeholder="http://localhost:20128/v1" value={config.omnirouteUrl || ''} onChange={(e) => updateConfig({ omnirouteUrl: e.target.value })} />
+                <p className="text-[11px] text-muted-foreground">OmniRoute debe estar ejecutándose. La API usa el endpoint compatible con OpenAI.</p>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Modelo o combo</label>
+                {availableModels.length > 0 ? (
+                  <select value={config.omnirouteModel || ''} onChange={(e) => updateConfig({ omnirouteModel: e.target.value })} className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm">
+                    <option value="auto">auto (routing automático)</option>
+                    {availableModels.filter((model) => model !== 'auto').map((model) => <option key={model} value={model}>{model}</option>)}
+                  </select>
+                ) : (
+                  <Input placeholder="auto" value={config.omnirouteModel || ''} onChange={(e) => updateConfig({ omnirouteModel: e.target.value })} />
+                )}
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">API key (opcional)</label>
+                <Input type="password" placeholder="Vacío para una instancia local sin autenticación" value={config.apiKey} onChange={(e) => updateConfig({ apiKey: e.target.value })} />
+              </div>
+            </>
           )}
 
           {config.provider === 'ollama' && (

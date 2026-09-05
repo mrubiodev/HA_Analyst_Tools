@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
-import { AlertCircle, X, ChevronRight, FileText, Filter, Plus, Trash2, ChevronDown } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { AlertCircle, X, ChevronRight, FileText, Filter, Plus, Trash2 } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'

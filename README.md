@@ -2,6 +2,23 @@
 
 Aplicación web para explorar, analizar y documentar instalaciones de **Home Assistant** desde el navegador, sin necesidad de instalar nada en el servidor.
 
+## Visión general
+
+HA Analyst Tools nace para convertir un inventario de Home Assistant en una herramienta operativa, legible y útil para diagnósticos, auditoría y documentación.
+
+Permite conectar con una instancia real de HA, inspeccionar entidades, automatizaciones, zonas y scripts, y exportar la información en formato práctico para trabajar o compartir conocimiento.
+
+Es útil tanto para usuarios avanzados que quieren entender mejor su instalación como para profesionales que necesitan auditar automatizaciones o documentar un sistema domótico sin depender de un entorno local complejo.
+
+## Guía rápida
+
+1. Abre la pestaña **Vault**.
+2. Introduce la URL de tu instancia de Home Assistant.
+3. Pega tu **Long-Lived Access Token**.
+4. Pulsa **Conectar**.
+5. Explora el inventario desde **Resumen**, **Explorer**, **Automatizaciones**, **Zonas** y **API HA**.
+6. Si necesitas documentación, usa **Exportar** para generar un fichero útil en Excel, JSON o Markdown.
+
 ## Funcionalidades
 
 - **Vault** — Conexión a cualquier instancia de Home Assistant mediante URL + Long-Lived Access Token. También admite carga offline de un JSON exportado previamente.
@@ -9,7 +26,7 @@ Aplicación web para explorar, analizar y documentar instalaciones de **Home Ass
 - **Explorer** — Búsqueda y exploración detallada de entidades por dominio, área o estado.
 - **Automatizaciones** — Listado con estado, modo y última ejecución de cada automatización.
 - **Zonas físicas** — Agrupa entidades por espacio físico (habitación, planta, fachada…). Las zonas son completamente personalizables: nombre, tipo (interior / fachada exterior / mixta), orientación y notas. También permite importar las áreas directamente desde HA.
-- **Agente IA** — Consulta tu instalación usando OpenAI, Anthropic, Ollama o LLMStudio.
+- **Agente IA** — Consulta tu instalación usando OpenAI, Anthropic, OmniRoute, Ollama o LLMStudio.
 - **API HA** — Pestaña dedicada para explorar manualmente endpoints y operaciones habituales de Home Assistant desde la propia app.
 - **Exportación flexible** — Exporta a Excel o JSON eligiendo qué secciones incluir y activando el **modo ligero** (elimina `attributes` y timestamps para reducir el tamaño del fichero hasta 10×).
 
@@ -27,7 +44,7 @@ Aplicación web para explorar, analizar y documentar instalaciones de **Home Ass
 
 El agente ha evolucionado para trabajar bien con modelos remotos y locales, incluyendo flujos con tool calling imperfecto.
 
-- **Proveedores soportados** — OpenAI, Anthropic, Ollama y LLMStudio.
+- **Proveedores soportados** — OpenAI, Anthropic, OmniRoute, Ollama y LLMStudio.
 - **Herramientas en tiempo real** — Puede consultar Home Assistant en directo para estados, entidades, plantillas y otras operaciones de lectura. También puede habilitarse el modo de acciones si quieres permitir llamadas que cambien estado.
 - **Contexto vacío por defecto** — Al abrir el chat no se incluye inventario automáticamente. El usuario decide qué partes añadir al prompt.
 - **Selección granular de contexto** — Puedes incluir o excluir automatizaciones, entidades, áreas y grupos, además de limitar el nivel de detalle enviado.
@@ -45,6 +62,15 @@ La integración con **LLMStudio** está orientada a modelos locales con contexto
 - Intenta descubrir el contexto real cargado del modelo a partir de metadatos como `loaded_context_length`, `max_context_length` y `loaded_instances[].config.context_length`.
 - Calcula automáticamente el presupuesto efectivo de prompt y reserva margen para evitar problemas de contexto o `n_keep` en el backend.
 - Permite definir un override manual del contexto y una reserva manual si quieres ajustar el comportamiento.
+
+## Integración con OmniRoute
+
+La integración con **OmniRoute** usa su API compatible con OpenAI para enrutar el chat hacia los proveedores y modelos configurados en el gateway.
+
+- URL base local por defecto: `http://localhost:20128/v1`.
+- Modelo por defecto: `auto`, para usar el enrutamiento automático y fallback de OmniRoute.
+- La API key es opcional para una instancia local sin autenticación; si el gateway la exige, se introduce desde la configuración del agente.
+- El listado de modelos se detecta desde `/v1/models` y se mantienen disponibles las herramientas nativas del agente.
 
 ## Gestión de contexto
 
@@ -84,6 +110,16 @@ Abre [http://localhost:8080](http://localhost:8080).
 - En Docker, nginx actúa como proxy hacia Home Assistant y hacia los endpoints necesarios de la app.
 - Para usar modelos locales, asegúrate de que **Ollama** o **LLMStudio** estén levantados y accesibles desde la URL configurada.
 - Si el modelo local tiene limitaciones de contexto reales menores que las teóricas, conviene revisar en el panel del agente el valor de contexto cargado y la reserva configurada.
+- El token de acceso se guarda en **sessionStorage** para reducir el riesgo de persistencia en el navegador. Se recomienda limpiar sesión cuando se deje de usar la herramienta.
+
+## Seguridad y privacidad
+
+Esta app se diseñó con una mentalidad de mínima exposición:
+
+- no se recomienda introducir tokens en equipos compartidos;
+- la conexión a HA debe hacerse con permisos mínimos necesarios;
+- los datos sensibles no deben compartirse en capturas ni exportaciones públicas;
+- se recomienda cerrar o limpiar la sesión al terminar cada trabajo.
 
 ## Configuración de CORS (opcional)
 

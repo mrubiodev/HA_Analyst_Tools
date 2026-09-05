@@ -170,6 +170,21 @@ async function sendOpenRouter(
   }, tools)
 }
 
+async function sendOmniRoute(
+  messages: LlmMessage[],
+  systemPrompt: string,
+  config: LlmConfig,
+  tools: HaTool[] = [],
+): Promise<LlmResponse> {
+  const baseUrl = (config.omnirouteUrl || 'http://localhost:20128/v1').replace(/\/$/, '')
+  return sendOpenAICompatible(messages, systemPrompt, config, {
+    model: config.omnirouteModel || 'auto',
+    url: `${baseUrl}/chat/completions`,
+    authHeader: config.apiKey ? `Bearer ${config.apiKey}` : '',
+    providerName: 'OmniRoute',
+  }, tools)
+}
+
 async function sendOpenAICompatible(
   messages: LlmMessage[],
   systemPrompt: string,
@@ -573,7 +588,7 @@ export async function sendLlmMessage(
   tools: HaTool[] = [],
 ): Promise<LlmResponse> {
   // For prompt-injection providers, augment system prompt with tool schemas
-  const isNativeToolProvider = config.provider === 'claude' || config.provider === 'openai' || config.provider === 'openrouter'
+  const isNativeToolProvider = config.provider === 'claude' || config.provider === 'openai' || config.provider === 'openrouter' || config.provider === 'omniroute'
   const effectiveSystemPrompt =
     tools.length > 0 && !isNativeToolProvider
       ? systemPrompt + '\n' + buildToolsSystemPromptSection(tools)
@@ -586,6 +601,8 @@ export async function sendLlmMessage(
       return sendOpenAI(messages, effectiveSystemPrompt, config, tools)
     case 'openrouter':
       return sendOpenRouter(messages, effectiveSystemPrompt, config, tools)
+    case 'omniroute':
+      return sendOmniRoute(messages, effectiveSystemPrompt, config, tools)
     case 'ollama':
       return sendOllama(messages, effectiveSystemPrompt, config, tools)
     case 'llmstudio':

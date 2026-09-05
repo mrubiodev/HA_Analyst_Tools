@@ -19,9 +19,10 @@ function haProxyPlugin(): Plugin {
           // Debug: log incoming proxy requests for easier troubleshooting
           // (will appear in the terminal running the Vite dev server).
           try {
-            // eslint-disable-next-line no-console
             console.debug(`[ha-proxy] ${req.method} ${req.url} - X-HA-Base: ${String(req.headers['x-ha-base'] ?? '')}`)
-          } catch {}
+          } catch {
+            /* ignore */
+          }
 
           const haBase = req.headers['x-ha-base'] as string | undefined
           if (!haBase) {
@@ -55,9 +56,10 @@ function haProxyPlugin(): Plugin {
           (proxyRes) => {
             // Log proxied response status for easier debugging
             try {
-              // eslint-disable-next-line no-console
               console.debug(`[ha-proxy] proxied -> ${targetUrl.href} : ${proxyRes.statusCode}`)
-            } catch {}
+            } catch {
+              /* ignore */
+            }
 
             // If the proxied server returned an error, buffer up to a limit
             // and log the response body to help diagnose 4xx/5xx failures.
@@ -76,9 +78,10 @@ function haProxyPlugin(): Plugin {
               proxyRes.on('end', () => {
                 try {
                   const body = Buffer.concat(chunks).toString('utf8')
-                  // eslint-disable-next-line no-console
                   console.debug(`[ha-proxy] proxied body (first ${MAX} bytes):`, body)
-                } catch {}
+                } catch {
+                  /* ignore */
+                }
               })
             }
 

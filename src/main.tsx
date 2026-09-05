@@ -8,16 +8,17 @@ import App from './App.tsx'
 // variables. This makes it easier to reproduce proxied API calls locally.
 if (import.meta.env.DEV) {
   try {
-    const base = (import.meta.env as any).VITE_HA_DEV_BASE as string | undefined
-    const token = (import.meta.env as any).VITE_HA_DEV_TOKEN as string | undefined
+    const env = import.meta.env as Record<string, unknown>
+    const base = typeof env.VITE_HA_DEV_BASE === 'string' ? env.VITE_HA_DEV_BASE : undefined
+    const token = typeof env.VITE_HA_DEV_TOKEN === 'string' ? env.VITE_HA_DEV_TOKEN : undefined
     if (base) {
       localStorage.setItem('ha-vault', JSON.stringify({ url: base }))
     }
     if (token) {
       sessionStorage.setItem('ha-token', token)
     }
-  } catch (e) {
-    // ignore
+  } catch {
+    /* ignore */
   }
 }
 
