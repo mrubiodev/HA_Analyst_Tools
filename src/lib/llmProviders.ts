@@ -50,6 +50,104 @@ function parseToolCallsOpenAI(rawCalls: unknown): ToolCallDef[] {
   })
 }
 
+type OpenAIChatResponse = {
+  choices?: Array<{
+    finish_reason?: string
+    message?: { content?: string | null; tool_calls?: unknown[]; reasoning_content?: string }
+  }>
+  usage?: {
+    prompt_tokens?: number
+    completion_tokens?: number
+    total_tokens?: number
+    tokens_per_second?: number
+  }
+  error?: { message?: string } | string
+}
+
+function buildOpenAIChatBody(
+  model: string,
+  messages: Array<Record<string, unknown>>,
+  config: LlmConfig,
+  tools: HaTool[],
+  stream = false,
+  includeToolChoice = true,
+): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    model,
+    messages,
+    ...(stream ? { stream: true } : {}),
+    ...(config.temperature !== undefined ? { temperature: config.temperature } : {}),
+    ...(config.maxTokens !== undefined ? { max_tokens: config.maxTokens } : {}),
+  }
+  if (tools.length > 0) {
+    body['tools'] = tools
+    if (includeToolChoice) body['tool_choice'] = 'auto'
+  }
+  return body
+}
+
+function parseOpenAIChatResponse(
+  raw: OpenAIChatResponse,
+  providerName: string,
+  tools: HaTool[],
+  allowInjectedTools = false,
+): LlmResponse {
+  if (raw.error) {
+    const message = typeof raw.error === 'string' ? raw.error : raw.error.message
+    return { content: '', error: message || `${providerName} returned an error`, stopReason: 'error' }
+  }
+
+  const choice = raw.choices?.[0]
+  if (!choice?.message) return { content: '', error: `${providerName} returned no choices`, stopReason: 'error' }
+
+  const text = choice.message.content ?? ''
+  const meta: Record<string, unknown> = {}
+  if (choice.message.reasoning_content) meta['reasoning'] = choice.message.reasoning_content
+  if (raw.usage) {
+    meta['stats'] = {
+      input_tokens: raw.usage.prompt_tokens,
+      output_tokens: raw.usage.completion_tokens,
+      total_tokens: raw.usage.total_tokens,
+      tokens_per_second: raw.usage.tokens_per_second,
+    }
+  }
+
+  if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {
+    const toolCalls = parseToolCallsOpenAI(choice.message.tool_calls)
+    if (toolCalls.length > 0) return { content: text, toolCalls, stopReason: 'tool_use', meta }
+  }
+
+  if (allowInjectedTools && tools.length > 0) {
+    const fallbackText = [text, choice.message.reasoning_content ?? ''].filter(Boolean).join('\n\n')
+    const injected = tryParseInjectedToolCalls(fallbackText)
+    if (injected) return { ...injected, meta }
+  }
+
+  return { content: text, meta, stopReason: 'stop' }
+}
+
+async function postOpenAIChatCompletion(
+  url: string,
+  body: Record<string, unknown>,
+  providerName: string,
+  tools: HaTool[],
+  headers: Record<string, string> = {},
+  allowInjectedTools = false,
+): Promise<LlmResponse> {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...headers },
+    body: JSON.stringify(body),
+  })
+
+  if (!res.ok) {
+    const err = await res.text().catch(() => res.statusText)
+    return { content: '', error: `${providerName} error ${res.status}: ${err}`, stopReason: 'error' }
+  }
+
+  return parseOpenAIChatResponse(await res.json() as OpenAIChatResponse, providerName, tools, allowInjectedTools)
+}
+
 // ─── Claude ───────────────────────────────────────────────────────────────────
 
 async function sendClaude(
@@ -136,124 +234,55 @@ async function sendClaude(
   return { content: text, stopReason: 'stop' }
 }
 
-// ─── OpenAI ───────────────────────────────────────────────────────────────────
+// ─── OpenAI-compatible providers ────────────────────────────────────────────
 
-async function sendOpenAI(
-  messages: LlmMessage[],
-  systemPrompt: string,
-  config: LlmConfig,
-  tools: HaTool[] = [],
-): Promise<LlmResponse> {
-  return sendOpenAICompatible(messages, systemPrompt, config, {
-    model: config.openaiModel || 'gpt-4o',
-    url: 'https://api.openai.com/v1/chat/completions',
-    authHeader: `Bearer ${config.apiKey}`,
-    providerName: 'OpenAI',
-  }, tools)
+type OpenAICompatibleRequest = {
+  model: string
+  url: string
+  providerName: string
+  extraHeaders?: Record<string, string>
 }
 
-async function sendOpenRouter(
-  messages: LlmMessage[],
-  systemPrompt: string,
-  config: LlmConfig,
-  tools: HaTool[] = [],
-): Promise<LlmResponse> {
-  return sendOpenAICompatible(messages, systemPrompt, config, {
+type OpenAICompatibleProvider = Exclude<LlmConfig['provider'], 'claude' | 'ollama' | 'llmstudio'>
+
+const OPENAI_COMPATIBLE_PROVIDERS: Record<OpenAICompatibleProvider, (config: LlmConfig) => OpenAICompatibleRequest> = {
+  openai: (config) => ({
+    model: config.openaiModel || 'gpt-4o',
+    url: 'https://api.openai.com/v1/chat/completions',
+    providerName: 'OpenAI',
+  }),
+  openrouter: (config) => ({
     model: config.openrouterModel || 'openai/gpt-4o-mini',
     url: 'https://openrouter.ai/api/v1/chat/completions',
-    authHeader: `Bearer ${config.apiKey}`,
     providerName: 'OpenRouter',
     extraHeaders: {
       'HTTP-Referer': 'http://localhost',
       'X-Title': 'hass_get_me_info',
     },
-  }, tools)
-}
-
-async function sendOmniRoute(
-  messages: LlmMessage[],
-  systemPrompt: string,
-  config: LlmConfig,
-  tools: HaTool[] = [],
-): Promise<LlmResponse> {
-  const baseUrl = (config.omnirouteUrl || 'http://localhost:20128/v1').replace(/\/$/, '')
-  return sendOpenAICompatible(messages, systemPrompt, config, {
-    model: config.omnirouteModel || 'auto',
-    url: `${baseUrl}/chat/completions`,
-    authHeader: config.apiKey ? `Bearer ${config.apiKey}` : '',
-    providerName: 'OmniRoute',
-  }, tools)
+  }),
+  omniroute: (config) => {
+    const baseUrl = (config.omnirouteUrl || 'http://localhost:20128/v1').replace(/\/$/, '')
+    return {
+      model: config.omnirouteModel || 'auto',
+      url: `${baseUrl}/chat/completions`,
+      providerName: 'OmniRoute',
+    }
+  },
 }
 
 async function sendOpenAICompatible(
   messages: LlmMessage[],
   systemPrompt: string,
   config: LlmConfig,
-  request: {
-    model: string
-    url: string
-    authHeader: string
-    providerName: string
-    extraHeaders?: Record<string, string>
-  },
+  request: OpenAICompatibleRequest,
   tools: HaTool[] = [],
 ): Promise<LlmResponse> {
-  const body: Record<string, unknown> = {
-    model: request.model,
-    messages: serializeMessagesOpenAI(messages, systemPrompt),
-    ...(config.temperature !== undefined ? { temperature: config.temperature } : {}),
-    ...(config.maxTokens !== undefined ? { max_tokens: config.maxTokens } : {}),
+  const headers: Record<string, string> = {
+    ...(request.extraHeaders ?? {}),
   }
-  if (tools.length > 0) {
-    body['tools'] = tools
-    body['tool_choice'] = 'auto'
-  }
-
-  const res = await fetch(request.url, {
-    method: 'POST',
-    headers: {
-      Authorization: request.authHeader,
-      'content-type': 'application/json',
-      ...(request.extraHeaders ?? {}),
-    },
-    body: JSON.stringify(body),
-  })
-
-  if (!res.ok) {
-    const err = await res.text().catch(() => res.statusText)
-    return { content: '', error: `${request.providerName} API error ${res.status}: ${err}`, stopReason: 'error' }
-  }
-
-  const data = await res.json() as {
-    choices: Array<{
-      finish_reason: string
-      message: { content: string | null; tool_calls?: unknown[] }
-    }>
-    usage?: {
-      prompt_tokens?: number
-      completion_tokens?: number
-      total_tokens?: number
-      tokens_per_second?: number
-    }
-  }
-  const choice = data.choices[0]
-  const text = choice?.message?.content ?? ''
-  const meta: Record<string, unknown> = {}
-  if (data.usage) {
-    meta['stats'] = {
-      input_tokens: data.usage.prompt_tokens,
-      output_tokens: data.usage.completion_tokens,
-      total_tokens: data.usage.total_tokens,
-      tokens_per_second: data.usage.tokens_per_second,
-    }
-  }
-
-  if (choice?.finish_reason === 'tool_calls' && choice.message.tool_calls) {
-    const toolCalls = parseToolCallsOpenAI(choice.message.tool_calls)
-    return { content: text, toolCalls, stopReason: 'tool_use', meta }
-  }
-
-  return { content: text, stopReason: 'stop', meta }
+  if (config.apiKey) headers['Authorization'] = `Bearer ${config.apiKey}`
+  const body = buildOpenAIChatBody(request.model, serializeMessagesOpenAI(messages, systemPrompt), config, tools)
+  return postOpenAIChatCompletion(request.url, body, request.providerName, tools, headers)
 }
 
 // ─── Ollama ───────────────────────────────────────────────────────────────────
@@ -270,14 +299,7 @@ async function sendOllama(
   // Build messages in OpenAI format (Ollama >=0.3 understands it)
   const ollamaMessages = serializeMessagesOpenAI(messages, systemPrompt)
 
-  const body: Record<string, unknown> = {
-    model,
-    stream: false,
-    messages: ollamaMessages,
-    ...(config.temperature !== undefined ? { temperature: config.temperature } : {}),
-    ...(config.maxTokens !== undefined ? { max_tokens: config.maxTokens } : {}),
-  }
-  if (tools.length > 0) body['tools'] = tools
+  const body = buildOpenAIChatBody(model, ollamaMessages, config, tools, false, false)
 
   const res = await fetch(`${base}/api/chat`, {
     method: 'POST',
@@ -344,81 +366,13 @@ async function sendLlmStudio(
     truncatedMessages.push(messages[messages.length - 1])
   }
 
-  const body: Record<string, unknown> = {
-    model,
-    messages: serializeMessagesOpenAI(truncatedMessages, systemPrompt),
-    stream: false,
-    ...(config.temperature !== undefined ? { temperature: config.temperature } : {}),
-    ...(config.maxTokens !== undefined ? { max_tokens: config.maxTokens } : {}),
-  }
-  if (tools.length > 0) body['tools'] = tools
+  const body = buildOpenAIChatBody(model, serializeMessagesOpenAI(truncatedMessages, systemPrompt), config, tools, false, false)
 
   const isDev = import.meta.env.DEV
   const url = isDev ? `/llmstudio-proxy/v1/chat/completions` : `${base}/v1/chat/completions`
   const extraHeaders: Record<string, string> = isDev ? { 'x-llm-base': base } : {}
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', ...extraHeaders },
-    body: JSON.stringify(body),
-  })
-
-  if (!res.ok) {
-    const err = await res.text().catch(() => res.statusText)
-    return { content: '', error: `LLMStudio error ${res.status}: ${err}`, stopReason: 'error' }
-  }
-
-  const data = await res.json() as {
-    choices?: Array<{
-      message?: {
-        content?: string
-        tool_calls?: unknown[]
-        reasoning_content?: string
-      }
-      finish_reason?: string
-    }>
-    usage?: {
-      prompt_tokens?: number
-      completion_tokens?: number
-      total_tokens?: number
-      tokens_per_second?: number
-    }
-    error?: { message?: string }
-  }
-
-  if (data.error?.message) return { content: '', error: data.error.message, stopReason: 'error' }
-
-  const choice = data.choices?.[0]
-  if (!choice) return { content: '', error: 'LLMStudio returned no choices', stopReason: 'error' }
-
-  const assistantText = choice.message?.content ?? ''
-  const meta: Record<string, unknown> = {}
-  if (choice.message?.reasoning_content) meta['reasoning'] = choice.message.reasoning_content
-  if (data.usage) {
-    meta['stats'] = {
-      input_tokens: data.usage.prompt_tokens,
-      output_tokens: data.usage.completion_tokens,
-      total_tokens: data.usage.total_tokens,
-      tokens_per_second: data.usage.tokens_per_second,
-    }
-  }
-
-  // Native tool calling (models that support it via OpenAI tool format)
-  if (choice.message?.tool_calls && choice.message.tool_calls.length > 0) {
-    const toolCalls = parseToolCallsOpenAI(choice.message.tool_calls).slice(0, 1)
-    if (toolCalls.length > 0) return { content: assistantText, toolCalls, stopReason: 'tool_use', meta }
-  }
-
-  // Fallback: prompt-injection tool call parser (for models that embed JSON in content)
-  if (tools.length > 0) {
-    const fallbackText = [assistantText, choice.message?.reasoning_content ?? '']
-      .filter(Boolean)
-      .join('\n\n')
-    const injected = tryParseInjectedToolCalls(fallbackText)
-    if (injected) return { ...injected, meta }
-  }
-
-  return { content: assistantText, meta, stopReason: 'stop' }
+  return postOpenAIChatCompletion(url, body, 'LLMStudio', tools, extraHeaders, true)
 }
 
 // ─── Prompt-injection tool call parser ───────────────────────────────────────
@@ -594,15 +548,14 @@ export async function sendLlmMessage(
       ? systemPrompt + '\n' + buildToolsSystemPromptSection(tools)
       : systemPrompt
 
+  const compatibleProvider = OPENAI_COMPATIBLE_PROVIDERS[config.provider as OpenAICompatibleProvider]
+  if (compatibleProvider) {
+    return sendOpenAICompatible(messages, effectiveSystemPrompt, config, compatibleProvider(config), tools)
+  }
+
   switch (config.provider) {
     case 'claude':
       return sendClaude(messages, effectiveSystemPrompt, config, tools)
-    case 'openai':
-      return sendOpenAI(messages, effectiveSystemPrompt, config, tools)
-    case 'openrouter':
-      return sendOpenRouter(messages, effectiveSystemPrompt, config, tools)
-    case 'omniroute':
-      return sendOmniRoute(messages, effectiveSystemPrompt, config, tools)
     case 'ollama':
       return sendOllama(messages, effectiveSystemPrompt, config, tools)
     case 'llmstudio':

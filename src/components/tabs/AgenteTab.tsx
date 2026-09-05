@@ -56,6 +56,12 @@ const PROVIDER_LABELS: Record<LlmProvider, string> = {
   llmstudio: '🟠 LLMStudio (local)',
 }
 
+const OPENAI_COMPATIBLE_MODEL_ENDPOINTS: Partial<Record<LlmProvider, (config: LlmConfig) => string>> = {
+  openai: () => 'https://api.openai.com/v1/models',
+  openrouter: () => 'https://openrouter.ai/api/v1/models',
+  omniroute: (config) => `${(config.omnirouteUrl || 'http://localhost:20128/v1').replace(/\/$/, '')}/models`,
+}
+
 const AUTO_SUMMARY_PREFIX = 'Resumen automático de conversación previa.'
 const SUMMARY_TARGET_CHARS = 1200
 const MIN_LIVE_MESSAGES = 4
@@ -520,6 +526,8 @@ export function AgenteTab() {
     saveLlmConfig(next)
   }
 
+  const compatibleModelsUrl = OPENAI_COMPATIBLE_MODEL_ENDPOINTS[config.provider]?.(config)
+
   // Fetch available models
   useEffect(() => {
     async function fetchModels() {
@@ -552,13 +560,10 @@ export function AgenteTab() {
               }
             } catch (err) { console.debug('llmstudio model fetch', err) }
           }
-        } else if (config.provider === 'omniroute' || ((config.provider === 'openai' || config.provider === 'openrouter') && config.apiKey)) {
-          const modelsUrl = config.provider === 'openrouter'
-            ? 'https://openrouter.ai/api/v1/models'
-            : config.provider === 'omniroute'
-              ? `${(config.omnirouteUrl || 'http://localhost:20128/v1').replace(/\/$/, '')}/models`
-              : 'https://api.openai.com/v1/models'
-          const r = await fetch(modelsUrl, { headers: config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {} })
+        } else {
+          const canDiscoverModels = compatibleModelsUrl && (config.provider === 'omniroute' || Boolean(config.apiKey))
+          if (!canDiscoverModels) return
+          const r = await fetch(compatibleModelsUrl, { headers: config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {} })
           if (r.ok) {
             const d = await r.json()
             const maybe = (d as Record<string, unknown>)['data']
@@ -573,7 +578,7 @@ export function AgenteTab() {
       } catch (e) { console.debug('fetchModels error', e) }
     }
     fetchModels()
-  }, [config.provider, config.ollamaUrl, config.llmstudioUrl, config.omnirouteUrl, config.apiKey])
+  }, [config.provider, config.ollamaUrl, config.llmstudioUrl, config.omnirouteUrl, config.apiKey, compatibleModelsUrl])
 
   const selectedLlmStudioModel = config.llmstudioModel || availableModels[0] || ''
   const selectedLlmStudioInfo = selectedLlmStudioModel ? llmstudioModelInfos[selectedLlmStudioModel] : undefined
