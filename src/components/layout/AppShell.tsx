@@ -144,25 +144,17 @@ export function AppShell({ activeTab, setActiveTab, children }: AppShellProps) {
       </aside>
 
       <aside className="border-b border-border bg-card/40">
-        <div className="mx-auto max-w-screen-xl px-4 py-4">
-          <div className="rounded-2xl border border-border bg-background/80 p-4 shadow-sm">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-1">
-                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">Sobre mí</p>
-                <h3 className="text-lg font-semibold">Soy Mario</h3>
-                <p className="text-sm text-muted-foreground max-w-2xl">
-                  Desarrollo herramientas para Home Assistant y automatización domótica. Si este proyecto te ha servido,
-                  me encantaría invitarte a un café como agradecimiento.
-                </p>
-              </div>
-
-              <a href="https://buymeacoffee.com" target="_blank" rel="noreferrer">
-                <Button variant="outline" className="gap-2 border-amber-500/50 bg-amber-500/5 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300">
-                  <Coffee className="w-4 h-4" />
-                  Invítame a un café
-                </Button>
-              </a>
-            </div>
+        <div className="mx-auto max-w-screen-xl px-4 py-2">
+          <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-muted-foreground sm:justify-between">
+            <p>
+              Proyecto mantenido por Mario para la comunidad de Home Assistant.
+            </p>
+            <a href="https://buymeacoffee.com" target="_blank" rel="noreferrer">
+              <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs text-amber-700 hover:bg-amber-500/10 hover:text-amber-800 dark:text-amber-300 dark:hover:text-amber-200">
+                <Coffee className="w-3.5 h-3.5" />
+                Apoyar el proyecto
+              </Button>
+            </a>
           </div>
         </div>
       </aside>
