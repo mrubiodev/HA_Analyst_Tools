@@ -26,6 +26,11 @@ export function VaultTab() {
       setError('Introduce la URL y el token de HA')
       return
     }
+    if (window.location.protocol === 'https:' && url.trim().toLowerCase().startsWith('http://')) {
+      setError('Esta aplicación usa HTTPS. Home Assistant debe estar publicado con HTTPS para evitar contenido mixto y permitir la conexión.')
+      setConnected(false)
+      return
+    }
     setConnecting(true)
     setError(null)
     setCorsError(false)
@@ -52,7 +57,7 @@ export function VaultTab() {
       const msg = e instanceof Error ? e.message : String(e)
       if (msg.toLowerCase().includes('failed to fetch') || msg.toLowerCase().includes('cors')) {
         setCorsError(true)
-        setError('Error de red (posiblemente CORS). Ver instrucciones abajo.')
+        setError('Error de red (posiblemente CORS). Añade esto a configuration.yaml de Home Assistant:\n\nhttp:\n  cors_allowed_origins:\n    - "https://hasstools.mrubiodev.com"')
       } else {
         setError(msg)
       }
@@ -92,6 +97,8 @@ export function VaultTab() {
     vaultToken.clear()
     setError(null)
   }
+
+  const appOrigin = window.location.origin
 
   return (
     <div className="grid gap-6 max-w-2xl mx-auto">
@@ -163,7 +170,7 @@ export function VaultTab() {
           </div>
 
           {error && (
-            <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
+            <div className="whitespace-pre-wrap rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
               {error}
             </div>
           )}
@@ -218,9 +225,8 @@ export function VaultTab() {
             <p>Para que el navegador pueda hacer peticiones a HA, debes añadir estas líneas a tu <code className="bg-secondary px-1 rounded">configuration.yaml</code>:</p>
             <pre className="bg-secondary rounded p-3 text-xs overflow-auto">{`http:
   cors_allowed_origins:
-    - "http://localhost:5173"   # dev
-    - "http://TU_IP_APP:80"    # producción`}</pre>
-            <p className="text-muted-foreground">Después reinicia HA (Herramientas del programador → Reiniciar).</p>
+              - "${appOrigin}"`}</pre>
+                <p className="text-muted-foreground">Después reinicia HA (Herramientas del programador → Reiniciar). La URL de HA también debe usar HTTPS si esta aplicación está publicada con HTTPS.</p>
             <p>Alternativa sin CORS: usa el <strong>modo offline</strong> con el script Python de arriba.</p>
           </CardContent>
         </Card>
