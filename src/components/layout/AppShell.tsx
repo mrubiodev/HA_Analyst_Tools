@@ -1,5 +1,5 @@
 
-import { Shield, Wifi, WifiOff, Download, Home, AlertTriangle } from 'lucide-react'
+import { Shield, Wifi, WifiOff, Download, Home, AlertTriangle, Coffee } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useVaultStore } from '@/store/vaultStore'
 import { useInventoryStore } from '@/store/inventoryStore'
@@ -109,6 +109,30 @@ export function AppShell({ activeTab, setActiveTab, children }: AppShellProps) {
             Usa credenciales temporales y de mínimo privilegio, no compartas capturas, exportaciones ni archivos JSON con datos reales,
             y limpia el almacenamiento del navegador al terminar.
           </p>
+        </div>
+      </aside>
+
+      <aside className="border-b border-border bg-card/40">
+        <div className="mx-auto max-w-screen-xl px-4 py-4">
+          <div className="rounded-2xl border border-border bg-background/80 p-4 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">Sobre mí</p>
+                <h3 className="text-lg font-semibold">Soy Mario</h3>
+                <p className="text-sm text-muted-foreground max-w-2xl">
+                  Desarrollo herramientas para Home Assistant y automatización domótica. Si este proyecto te ha servido,
+                  me encantaría invitarte a un café como agradecimiento.
+                </p>
+              </div>
+
+              <a href="https://buymeacoffee.com" target="_blank" rel="noreferrer">
+                <Button variant="outline" className="gap-2 border-amber-500/50 bg-amber-500/5 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300">
+                  <Coffee className="w-4 h-4" />
+                  Invítame a un café
+                </Button>
+              </a>
+            </div>
+          </div>
         </div>
       </aside>
 
