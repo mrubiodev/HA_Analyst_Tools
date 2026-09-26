@@ -1,5 +1,11 @@
 # hass_get_me_info
 
+![Status](https://img.shields.io/badge/status-Public-2ea44f)  
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)  
+![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white)  
+![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)  
+![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Integration-41BDF5?logo=homeassistant&logoColor=white)
+
 Aplicación web para explorar, analizar y documentar instalaciones de **Home Assistant** desde el navegador, sin necesidad de instalar nada en el servidor.
 
 ## Visión general
