@@ -1,142 +1,81 @@
-# hass_get_me_info
+# HA Analyst Tools
 
-![Status](https://img.shields.io/badge/status-Public-2ea44f)  
-![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)  
-![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white)  
-![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)  
-![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Integration-41BDF5?logo=homeassistant&logoColor=white)
+![Estado](https://img.shields.io/badge/estado-Activo-2ea44f)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)
+![Home Assistant](https://img.shields.io/badge/Home%20Assistant-REST%20API-41BDF5?logo=homeassistant&logoColor=white)
 
-Aplicación web para explorar, analizar y documentar instalaciones de **Home Assistant** desde el navegador, sin necesidad de instalar nada en el servidor.
+Aplicación web de análisis y documentación para instalaciones de Home Assistant. Se ejecuta en el navegador, consulta la API REST de HA y reúne el inventario, las herramientas de auditoría, la exploración de la API y un agente de IA en una sola interfaz.
 
-## Visión general
+## Funciones
 
-HA Analyst Tools nace para convertir un inventario de Home Assistant en una herramienta operativa, legible y útil para diagnósticos, auditoría y documentación.
+- **Vault:** conecta con Home Assistant usando la URL de la instancia y un Long-Lived Access Token, o carga un inventario JSON exportado previamente.
+- **Resumen:** muestra indicadores del inventario y una tabla de entidades con filtros por columnas, reglas y búsqueda.
+- **Explorer:** permite localizar entidades y consultar sus estados y atributos.
+- **Automatizaciones:** filtra automatizaciones por nombre, estado y modo, y muestra datos como última ejecución.
+- **Zonas:** crea zonas físicas, asigna entidades y guarda la organización en el almacenamiento local del navegador.
+- **Agente IA:** trabaja con OpenAI, Anthropic/Claude, OpenRouter, OmniRoute, Ollama y LM Studio. Permite elegir qué inventario incluir en el contexto y consultar HA con herramientas.
+- **API HA:** explora estados, servicios, historial, logbook, eventos, sistema, plantillas, calendarios e intents.
+- **Exportación:** genera Excel o JSON por secciones y con modo ligero. La tabla del Resumen también puede exportarse a Markdown.
 
-Permite conectar con una instancia real de HA, inspeccionar entidades, automatizaciones, zonas y scripts, y exportar la información en formato práctico para trabajar o compartir conocimiento.
+## Conexión y datos
 
-Es útil tanto para usuarios avanzados que quieren entender mejor su instalación como para profesionales que necesitan auditar automatizaciones o documentar un sistema domótico sin depender de un entorno local complejo.
+Para conectar la aplicación, introduce la URL completa de Home Assistant y un Long-Lived Access Token con los permisos necesarios. En desarrollo, Vite usa un proxy; en una aplicación publicada, el navegador se conecta directamente a Home Assistant y la instancia debe permitir el origen web mediante CORS.
 
-## Guía rápida
+La URL se conserva en `localStorage`. El token de Home Assistant y la configuración del agente se guardan en `sessionStorage` de la pestaña. Si usas un proveedor de IA remoto, se envían a ese proveedor los mensajes y el contexto que hayas incluido en la conversación. Los proveedores locales envían las solicitudes a la dirección configurada.
 
-1. Abre la pestaña **Vault**.
-2. Introduce la URL de tu instancia de Home Assistant.
-3. Pega tu **Long-Lived Access Token**.
-4. Pulsa **Conectar**.
-5. Explora el inventario desde **Resumen**, **Explorer**, **Automatizaciones**, **Zonas** y **API HA**.
-6. Si necesitas documentación, usa **Exportar** para generar un fichero útil en Excel, JSON o Markdown.
+> **Acciones del agente:** el agente incluye herramientas de lectura y herramientas que pueden ejecutar servicios, emitir eventos o actualizar estados de HA. Habilita las acciones solo cuando quieras permitir cambios en tu instalación. La pestaña API HA también incluye operaciones POST.
 
-## Funcionalidades
+## Límites actuales
 
-- **Vault** — Conexión a cualquier instancia de Home Assistant mediante URL + Long-Lived Access Token. También admite carga offline de un JSON exportado previamente.
-- **Resumen** — KPIs y tabla filtrable de todas las entidades. Haz clic en cualquier indicador (automatizaciones activas, entidades no disponibles, actuadores encendidos…) para filtrar la tabla al instante.
-- **Explorer** — Búsqueda y exploración detallada de entidades por dominio, área o estado.
-- **Automatizaciones** — Listado con estado, modo y última ejecución de cada automatización.
-- **Zonas físicas** — Agrupa entidades por espacio físico (habitación, planta, fachada…). Las zonas son completamente personalizables: nombre, tipo (interior / fachada exterior / mixta), orientación y notas. También permite importar las áreas directamente desde HA.
-- **Agente IA** — Consulta tu instalación usando OpenAI, Anthropic, OmniRoute, Ollama o LLMStudio.
-- **API HA** — Pestaña dedicada para explorar manualmente endpoints y operaciones habituales de Home Assistant desde la propia app.
-- **Exportación flexible** — Exporta a Excel o JSON eligiendo qué secciones incluir y activando el **modo ligero** (elimina `attributes` y timestamps para reducir el tamaño del fichero hasta 10×).
-
-## Pestañas disponibles
-
-- **Vault** — Configuración de conexión, token y carga offline.
-- **Resumen** — Vista global del inventario con filtros rápidos.
-- **Explorer** — Navegación detallada por entidades.
-- **Automatizaciones** — Auditoría rápida de automatizaciones.
-- **Zonas físicas** — Organización espacial personalizada.
-- **Agente IA** — Chat con contexto opcional y herramientas en tiempo real.
-- **API HA** — Exploración manual de APIs de Home Assistant.
-
-## Agente IA
-
-El agente ha evolucionado para trabajar bien con modelos remotos y locales, incluyendo flujos con tool calling imperfecto.
-
-- **Proveedores soportados** — OpenAI, Anthropic, OmniRoute, Ollama y LLMStudio.
-- **Herramientas en tiempo real** — Puede consultar Home Assistant en directo para estados, entidades, plantillas y otras operaciones de lectura. También puede habilitarse el modo de acciones si quieres permitir llamadas que cambien estado.
-- **Contexto vacío por defecto** — Al abrir el chat no se incluye inventario automáticamente. El usuario decide qué partes añadir al prompt.
-- **Selección granular de contexto** — Puedes incluir o excluir automatizaciones, entidades, áreas y grupos, además de limitar el nivel de detalle enviado.
-- **Compresión automática** — Si la conversación crece demasiado, la app resume mensajes anteriores para evitar desbordar la ventana de contexto.
-- **Visibilidad de consumo** — El chat muestra cuánto ocupan las instrucciones, el resumen acumulado y los mensajes vivos, junto con el presupuesto disponible.
-- **Métricas de respuesta** — Cada respuesta puede mostrar fecha, hora, tokens de entrada y salida, velocidad en tokens por segundo y tiempo total de respuesta cuando el proveedor lo expone.
-- **Trazas del agente** — Las llamadas a herramientas se muestran en bloques expandibles para ver argumentos, resultados y secuencia de consultas realizadas.
-
-## Integración con LLMStudio
-
-La integración con **LLMStudio** está orientada a modelos locales con contexto amplio y tool calling heterogéneo.
-
-- Usa el endpoint compatible OpenAI de LLMStudio para chat completions.
-- Detecta modelos disponibles automáticamente desde `/api/v1/models` o `/v1/models`.
-- Intenta descubrir el contexto real cargado del modelo a partir de metadatos como `loaded_context_length`, `max_context_length` y `loaded_instances[].config.context_length`.
-- Calcula automáticamente el presupuesto efectivo de prompt y reserva margen para evitar problemas de contexto o `n_keep` en el backend.
-- Permite definir un override manual del contexto y una reserva manual si quieres ajustar el comportamiento.
-
-## Integración con OmniRoute
-
-La integración con **OmniRoute** usa su API compatible con OpenAI para enrutar el chat hacia los proveedores y modelos configurados en el gateway.
-
-- URL base local por defecto: `http://localhost:20128/v1`.
-- Modelo por defecto: `auto`, para usar el enrutamiento automático y fallback de OmniRoute.
-- La API key es opcional para una instancia local sin autenticación; si el gateway la exige, se introduce desde la configuración del agente.
-- El listado de modelos se detecta desde `/v1/models` y se mantienen disponibles las herramientas nativas del agente.
-
-## Gestión de contexto
-
-La aplicación intenta evitar que el chat consuma contexto innecesario o se vuelva frágil con modelos locales.
-
-- El inventario no se envía salvo que el usuario lo seleccione.
-- El histórico del chat se comprime automáticamente cuando supera el presupuesto objetivo.
-- Los resultados de herramientas grandes se truncán para evitar que una sola consulta desborde la ventana disponible.
-- La interfaz muestra una barra de ocupación con reparto entre instrucciones, resumen, mensajes y espacio libre.
-
-## Compatibilidad con Home Assistant
-
-- Conexión mediante URL base + **Long-Lived Access Token**.
-- Soporte para inventario exportado en JSON para trabajar offline.
-- Consultas en tiempo real mediante herramientas del agente y exploración manual en la pestaña **API HA**.
-- Algunas rutas internas no expuestas directamente por HTTP en todas las instalaciones pueden no estar disponibles según la versión o configuración de Home Assistant.
+- La conexión online carga estados de entidades. El cliente REST todavía no obtiene el registro de áreas ni el registro de entidades de HA; por ello, la importación automática de áreas puede aparecer vacía. Puedes crear zonas manualmente. Un inventario JSON sí puede conservar áreas si las incluye.
+- La API REST y las funciones disponibles dependen de los permisos del token y de la versión/configuración de Home Assistant.
+- El inventario offline debe ser un JSON completo compatible con el modelo de inventario de la aplicación.
 
 ## Desarrollo local
 
-```bat
-run-local.bat
-```
+Necesitas Node.js y npm. En Windows puedes usar:
 
-Abre [http://localhost:5173](http://localhost:5173).
+~~~bat
+run-local.bat
+~~~
+
+O ejecutar los comandos desde la raíz del repositorio:
+
+~~~bash
+npm ci
+npm run dev
+~~~
+
+Vite inicia el servidor de desarrollo en `http://localhost:5173`.
 
 ## Docker
 
-```powershell
+Con Docker instalado, ejecuta desde PowerShell:
+
+~~~powershell
 .\run.ps1
-```
+~~~
 
-Abre [http://localhost:8080](http://localhost:8080).
+La aplicación queda disponible en `http://localhost:8080`. La imagen compila el frontend y lo sirve con nginx.
 
-## Notas de uso
+## CORS en Home Assistant
 
-- En desarrollo, Vite usa proxy para evitar problemas de CORS.
-- En Docker, nginx actúa como proxy hacia Home Assistant y hacia los endpoints necesarios de la app.
-- Para usar modelos locales, asegúrate de que **Ollama** o **LLMStudio** estén levantados y accesibles desde la URL configurada.
-- Si el modelo local tiene limitaciones de contexto reales menores que las teóricas, conviene revisar en el panel del agente el valor de contexto cargado y la reserva configurada.
-- El token de acceso se guarda en **sessionStorage** para reducir el riesgo de persistencia en el navegador. Se recomienda limpiar sesión cuando se deje de usar la herramienta.
+En desarrollo, el proxy de Vite evita configurar CORS para el servidor local. En producción, añade el origen exacto desde el que sirves la aplicación en `configuration.yaml` y reinicia Home Assistant:
 
-## Seguridad y privacidad
-
-Esta app se diseñó con una mentalidad de mínima exposición:
-
-- no se recomienda introducir tokens en equipos compartidos;
-- la conexión a HA debe hacerse con permisos mínimos necesarios;
-- los datos sensibles no deben compartirse en capturas ni exportaciones públicas;
-- se recomienda cerrar o limpiar la sesión al terminar cada trabajo.
-
-## Configuración de CORS
-
-En modo desarrollo el proxy de Vite evita los errores de CORS automáticamente. En producción, la aplicación estática contacta directamente con Home Assistant, por lo que HA debe permitir el origen desde el que se abre la aplicación:
-
-```yaml
+~~~yaml
 http:
   cors_allowed_origins:
-    - "http://localhost:5173"
-    - "https://hasstools.mrubiodev.com"
-```
+    - "https://tu-dominio.example"
+~~~
 
-Reinicia Home Assistant después de cambiar `configuration.yaml`. La URL configurada en Vault también debe usar `https://`, por ejemplo `https://hass.local`; una aplicación publicada con HTTPS no puede acceder directamente a una URL HTTP.
+Una página HTTPS no puede llamar a una instancia HTTP desde el navegador; sirve Home Assistant también por HTTPS.
 
+## Stack
+
+React 18, TypeScript, Vite, Tailwind CSS, Zustand y Radix UI. Las exportaciones Excel usan SheetJS (`xlsx`). Las integraciones de IA se conectan desde el navegador al proveedor configurado.
+
+## Privacidad
+
+No compartas capturas ni exportaciones que contengan datos sensibles de tu instalación. Usa un token con los permisos mínimos que necesites, evita introducirlo en equipos compartidos y limpia la sesión al terminar.
