@@ -237,8 +237,8 @@ getState().inventory
 ### Vite Debug
 ```bash
 # Terminal donde corre dev server
-[ha-proxy] GET /api/states - X-HA-Base: http://192.168.1.100:8123
-[ha-proxy] GET /api/config - X-HA-Base: http://192.168.1.100:8123
+[ha-proxy] GET /api/states - X-HA-Base: http://<ha-host>:8123
+[ha-proxy] GET /api/config - X-HA-Base: http://<ha-host>:8123
 ```
 
 ### Logs Útiles para Agregar
