@@ -1,10 +1,14 @@
 # HA Analyst Tools
 
+> Aplicación web para analizar y documentar instalaciones de Home Assistant desde el navegador.
+
 ![Estado](https://img.shields.io/badge/estado-Activo-2ea44f)
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-REST%20API-41BDF5?logo=homeassistant&logoColor=white)
+
+## Resumen
 
 Aplicación web de análisis y documentación para instalaciones de Home Assistant. Se ejecuta en el navegador, consulta la API REST de HA y reúne el inventario, las herramientas de auditoría, la exploración de la API y un agente de IA en una sola interfaz.
 
