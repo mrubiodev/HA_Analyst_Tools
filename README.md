@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/imagenes/portada.jpg" alt="HA Analyst Tools" width="100%">
+</p>
+
 # HA Analyst Tools
 
 > Aplicación web para analizar y documentar instalaciones de Home Assistant desde el navegador.
