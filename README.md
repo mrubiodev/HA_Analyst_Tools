@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/imagenes/portada.jpg" alt="HA Analyst Tools" width="100%">
+  <img src="Docs/Imagenes/Portada.jpg" alt="HA Analyst Tools" width="100%">
 </p>
 
 # HA Analyst Tools
