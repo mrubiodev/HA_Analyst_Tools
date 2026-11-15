@@ -2,9 +2,11 @@
 
 **Fecha de verificación:** 2026-06-05  
 **Verificador:** Automated Analysis  
-**Estado General:** ✅ **COMPLETO Y OPERACIONAL**
+**Estado declarado durante aquella revisión:** ✅ **COMPLETO Y OPERACIONAL (verificación histórica, no revalidada)**
 
 ---
+
+> **Nota de vigencia (2026-11-15):** este informe es una evidencia histórica del 05/06/2026, no un certificado del estado operativo actual. No se han reejecutado aquí el build, el lint, las pruebas de integración ni la conexión a una instancia Home Assistant. Las afirmaciones de funcionamiento deben interpretarse con esa fecha y con las limitaciones documentadas en el README.
 
 ## ✅ Verificación de Compilación y Código
 
